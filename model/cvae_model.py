@@ -20,14 +20,20 @@ class CVAE(nn.Module):
         label_emb_dim=16,
         latent_dim=64,
         hidden_dims_encoder=[32, 64, 128],
-        hidden_dims_decoder=[128, 64, 10]  # Adjusted: final layer outputs 10 channels directly
+        hidden_dims_decoder=[128, 64, 10],  # Adjusted: final layer outputs 10 channels directly
+        use_label_emb=False
     ):
         super(CVAE, self).__init__()
 
         # ----------------------------------------------------
         # Label embedding
         # ----------------------------------------------------
-        self.label_emb = nn.Linear(num_classes, label_emb_dim)
+        # if use_label_emb is False, use one-hot input directly
+        self.use_label_emb = use_label_emb
+        if use_label_emb:
+            self.label_emb = nn.Linear(num_classes, label_emb_dim)
+        else:
+            label_emb_dim = num_classes
 
         # ----------------------------------------------------
         # Encoder
@@ -96,7 +102,7 @@ class CVAE(nn.Module):
         labels shape: (batch_size, 5)
         """
         # Get label embedding and expand along time dimension
-        label_emb = self.label_emb(labels)  # (batch_size, label_emb_dim)
+        label_emb = self.label_emb(labels) if self.use_label_emb else labels # (batch_size, label_emb_dim)
         batch_size = x.size(0)
         label_emb_expanded = label_emb.unsqueeze(-1).repeat(1, 1, x.size(-1))
         x_cond = torch.cat((x, label_emb_expanded), dim=1)  # (batch_size, 10+label_emb_dim, 3000)
@@ -123,7 +129,8 @@ class CVAE(nn.Module):
         z shape: (batch_size, latent_dim)
         labels shape: (batch_size, 5)
         """
-        label_emb = self.label_emb(labels)  # (batch_size, label_emb_dim)
+        label_emb = self.label_emb(labels) if self.use_label_emb else labels # (batch_size, label_emb_dim)
+
         z_cond = torch.cat((z, label_emb), dim=1)  # (batch_size, latent_dim + label_emb_dim)
         x = self.decoder_input(z_cond)  # (batch_size, encoder_out_dim)
         batch_size = x.size(0)
