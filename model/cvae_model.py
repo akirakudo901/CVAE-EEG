@@ -61,9 +61,10 @@ class CVAE(nn.Module):
             # Formula: L_out = (L_in + 2*padding - (kernel_size-1) -1) // stride + 1
             self.downsampled_length = (self.downsampled_length + 2*PADDING - K_SIZE) // STRIDE + 1
 
+        # The label one-hot/embedding is input here together with CNN features
         encoder_out_dim = self.last_encoder_dim * self.downsampled_length
-        self.fc_mu = nn.Linear(encoder_out_dim, latent_dim)
-        self.fc_logvar = nn.Linear(encoder_out_dim, latent_dim)
+        self.fc_mu     = nn.Linear(encoder_out_dim + label_emb_dim, latent_dim)
+        self.fc_logvar = nn.Linear(encoder_out_dim + label_emb_dim, latent_dim)
 
         # ----------------------------------------------------
         # Decoder
@@ -101,19 +102,16 @@ class CVAE(nn.Module):
         x shape: (batch_size, 10, 3000)
         labels shape: (batch_size, 5)
         """
-        # Get label embedding and expand along time dimension
+        # Get label embedding
         label_emb = self.label_emb(labels) if self.use_label_emb else labels # (batch_size, label_emb_dim)
-        batch_size = x.size(0)
-        label_emb_expanded = label_emb.unsqueeze(-1).repeat(1, 1, x.size(-1))
-        x_cond = torch.cat((x, label_emb_expanded), dim=1)  # (batch_size, 10+label_emb_dim, 3000)
 
-        # Pass through convolutional encoder layers
+        # Pass x through convolutional encoder layers
         for conv in self.encoder_convs:
-            x_cond = conv(x_cond)
-
-        x_cond = x_cond.view(x_cond.size(0), -1)
-        mu = self.fc_mu(x_cond)
-        logvar = self.fc_logvar(x_cond)
+            x = conv(x)
+        
+        x_flat = x.view(x.size(0), -1)
+        x_cond = torch.cat((x_flat, label_emb), dim=1) # (batch_size, x_flat.size() + label_emb_dim)
+        mu, logvar = self.fc_mu(x_cond), self.fc_logvar(x_cond)
         return mu, logvar
 
     def reparameterize(self, mu, logvar):
