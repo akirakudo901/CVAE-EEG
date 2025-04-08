@@ -157,6 +157,6 @@ def loss_function(recon_x, x, mu, logvar, kld_weight=1.0):
     kld_weight: weight for the KL term (e.g., for KL annealing)
     """
     recon_loss = F.mse_loss(recon_x, x, reduction='mean')
-    kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+    kld = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
     loss = recon_loss + kld_weight * kld
     return loss, recon_loss, kld
