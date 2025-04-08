@@ -40,7 +40,7 @@ class CVAE(nn.Module):
         # ----------------------------------------------------
         # Fuse label embedding with the input by broadcasting along the time dimension
         self.encoder_convs = nn.ModuleList()
-        in_channels = input_channels + label_emb_dim
+        in_channels = input_channels
 
         K_SIZE, STRIDE, PADDING = 4, 2, 1
         for h_dim in hidden_dims_encoder:
