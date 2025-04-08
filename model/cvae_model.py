@@ -20,7 +20,7 @@ class CVAE(nn.Module):
         label_emb_dim=16,
         latent_dim=64,
         hidden_dims_encoder=[32, 64, 128],
-        hidden_dims_decoder=[128, 64, 10],  # Adjusted: final layer outputs 10 channels directly
+        hidden_dims_decoder=[64, 32, 10],  # Adjusted: final layer outputs 10 channels directly
         use_label_emb=False
     ):
         super(CVAE, self).__init__()
